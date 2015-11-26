@@ -12,6 +12,7 @@ public class Core {
 	private static JPanel searchTags;
 	private static JPanel resultsPanel;
 	private static WP_Tree tree;
+	private static int tolerance = 32;
 	
 	public static void main(String[] args) {
 		mainFrame = new JFrame("Wallpaper Search");
@@ -20,9 +21,12 @@ public class Core {
 		
 		tree = new WP_Tree();
 		
-		directoryInput = new DirectoryScanner(tree);
+		int sample = 128;
+		int val = 0xff;
+		System.out.println((sample & 0xff) );
+		directoryInput = new DirectoryScanner(tree, tolerance);
 		directoryInput.setLayout(new FlowLayout());
-		directoryInput.scanDirectory("/Users/jameslevasseur/Desktop/wp/");
+		directoryInput.scanDirectory("/Users/jameslevasseur/Desktop/testwp/");
 		System.out.println("done.");
 	}
 
