@@ -10,27 +10,67 @@ import java.io.File;
 import java.awt.image.DataBufferByte;
 import java.awt.Color;
 import java.math.*;
-
+import java.lang.ArrayIndexOutOfBoundsException;
 
 public class DirectoryScanner extends JPanel {
 
-	private WP_Tree tree;
+	private RedBlackTree rbtree;
+	private String treeType;
 	private String dir;
 	private int tolerance;
 
-	public DirectoryScanner (WP_Tree tree, int tolerance) {
-		this.tree = tree;
+	public DirectoryScanner (RedBlackTree tree, int tolerance) {
+		this.rbtree = tree;
 		this.tolerance = tolerance;
+		this.treeType = "rb";
 	}
 
 
-	private void processImageColors(BufferedImage image) {
+	private void processImageColors(BufferedImage image, String path, int w, int h) {
+		final byte[] pixels = ((DataBufferByte) image.getRaster().getDataBuffer()).getData();
 		int width = image.getWidth();
 		int height = image.getHeight();
 		String[] newValues = new String[width*height];
 		int index = 0;
-		
-		for (int col = 0; col < height; col++) {
+		System.out.println("pixels: "+pixels.length);
+		final int pixelLength = 3;
+		for (int pixel = 0, row = 0, col = 0; pixel < pixels.length; pixel += pixelLength) {
+			int argb = 0;
+			try {
+				argb += -16777216; // 255 alpha
+				argb += ((int) pixels[pixel] & 0xff); // blue
+				argb += (((int) pixels[pixel + 1] & 0xff) << 8); // green
+				argb += (((int) pixels[pixel + 2] & 0xff) << 16); // red
+			} catch (ArrayIndexOutOfBoundsException e) {
+				continue;
+			}
+			if (index == 0) {
+				newValues[index] = makeHexVal(argb);
+				index++;
+			} else {
+				String current = makeHexVal(argb);
+				Boolean exists = false;
+				for (int i=0; i<index; i++) {
+					if (hexDiff(current,newValues[i])<tolerance ) {
+						exists = true;
+						break;
+					}
+				}
+				if (!exists) {
+					newValues[index] = current;
+					index++;
+				}
+
+			}
+			row++;
+			if (row == width) {
+				row = 0;
+				col++;
+			}
+		}
+
+		/*
+		for (int col = 0; col < height; col++) {System.out.println("col: "+col);
 			for (int row = 0; row < width; row++) {
 				if (index == 0) {
 					newValues[index] = makeHexVal(image.getRGB(row, col));
@@ -48,18 +88,27 @@ public class DirectoryScanner extends JPanel {
 						newValues[index] = current;
 						index++;
 					}
-					
+
 				}
 			}
 		} //outer for
-		
-		//TODO insert new vals into tree
+		 */
+		System.out.println(index);
+		for (int i=0; i<index; i++) {
+			if (treeType.equals("rb")) {
+				ColorDataPair existing = (ColorDataPair) rbtree.find(new ColorDataPair(newValues[i], path, width, height));
+				if (existing==null)
+					this.rbtree.insert(new ColorDataPair(newValues[i], path, width, height));
+				else
+					existing.addWallpaper(new Wallpaper(path,width,height));
+			}
+		}
 	}
-	
+
 	private int hexDiff (String hex1, String hex2) {
-		int redDiff = Math.abs( Integer.parseInt(hex1.substring(0,2)) - Integer.parseInt(hex2.substring(0,2)) );
-		int greenDiff = Math.abs( Integer.parseInt(hex1.substring(2,4)) - Integer.parseInt(hex2.substring(2,4)) );
-		int blueDiff = Math.abs( Integer.parseInt(hex1.substring(4,6)) - Integer.parseInt(hex2.substring(4,6)) );
+		int redDiff = Math.abs( Integer.parseInt(hex1.substring(0,2), 16) - Integer.parseInt(hex2.substring(0,2), 16) );
+		int greenDiff = Math.abs( Integer.parseInt(hex1.substring(2,4), 16) - Integer.parseInt(hex2.substring(2,4), 16) );
+		int blueDiff = Math.abs( Integer.parseInt(hex1.substring(4,6), 16) - Integer.parseInt(hex2.substring(4,6), 16) );
 		return redDiff+greenDiff+blueDiff;
 	}
 
@@ -94,8 +143,8 @@ public class DirectoryScanner extends JPanel {
 						BufferedImage bimg;
 						try {
 							bimg = ImageIO.read(new File(filePath.toString()));
-							
-
+							System.out.println("pre processing");
+							this.processImageColors(bimg, filePath.toString(), bimg.getWidth(), bimg.getHeight());
 						} catch (IOException e) {
 							System.out.println(e.toString());
 						}

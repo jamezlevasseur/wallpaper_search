@@ -11,22 +11,18 @@ public class Core {
 	private static JPanel searchColors;
 	private static JPanel searchTags;
 	private static JPanel resultsPanel;
-	private static WP_Tree tree;
-	private static int tolerance = 32;
+	private static RedBlackTree rbtree;
+	private static int tolerance = 150;
 	
 	public static void main(String[] args) {
 		mainFrame = new JFrame("Wallpaper Search");
 		mainFrame.setSize(800,800);
 		mainFrame.setLayout(new GridLayout(4, 1));
-		
-		tree = new WP_Tree();
-		
-		int sample = 128;
-		int val = 0xff;
-		System.out.println((sample & 0xff) );
-		directoryInput = new DirectoryScanner(tree, tolerance);
+		rbtree = new RedBlackTree();
+		directoryInput = new DirectoryScanner(rbtree, tolerance);
 		directoryInput.setLayout(new FlowLayout());
-		directoryInput.scanDirectory("/Users/jameslevasseur/Desktop/testwp/");
+		directoryInput.scanDirectory("/Users/jameslevasseur/Desktop/wp/");
+		rbtree.printTree();
 		System.out.println("done.");
 	}
 
