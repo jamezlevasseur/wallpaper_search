@@ -1,9 +1,11 @@
 package wallpaper_search;
 
 import java.util.ArrayList;
+import java.io.Serializable;
 
-public class ColorDataPair implements Comparable<Object> {
+public class ColorDataPair implements Comparable<Object>, Serializable {
 
+	private static final long serialVersionUID = 435662235;
 	private String hex;
 	private ArrayList<Wallpaper> wallpapers;
 	
@@ -11,6 +13,11 @@ public class ColorDataPair implements Comparable<Object> {
 		this.hex = hex;
 		this.wallpapers = new ArrayList<Wallpaper>();
 		this.wallpapers.add(new Wallpaper(filePath, width, height));
+	}
+	
+	public ColorDataPair (String hex) {
+		this.hex = hex;
+		this.wallpapers = new ArrayList<Wallpaper>();
 	}
 	
 	@Override
@@ -35,12 +42,32 @@ public class ColorDataPair implements Comparable<Object> {
 		wallpapers.add(wp);
 	}
 	
-	public ArrayList<Wallpaper> getPaths () {
+	public ArrayList<Wallpaper> getWallpapers () {
 		return this.wallpapers;
 	}
 
 	public String getHex() {
 		return this.hex;
+	}
+	
+	public int[] getLowHigh (int tolerance) {
+		int val = Integer.parseInt(this.getHex().substring(0,2), 16)
+				+ Integer.parseInt(this.getHex().substring(2,4), 16)
+				+ Integer.parseInt(this.getHex().substring(4,6), 16);
+		int[] lowHigh = new int[] {val-tolerance, val+tolerance};
+		if (lowHigh[0]<0)
+			lowHigh[0] = 0;
+		if (lowHigh[1]>765)
+			lowHigh[1] = 765;
+		return new int[] {val-tolerance, val+tolerance};
+	}
+	
+	public static String makeHexVal (int val) {
+		String hexColour = Integer.toHexString(val & 0xffffff);
+		if (hexColour.length() < 6) {
+			hexColour = "000000".substring(0, 6 - hexColour.length()) + hexColour;
+		}
+		return hexColour;
 	}
 	
 }
