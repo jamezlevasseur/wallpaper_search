@@ -19,15 +19,18 @@ public class DirectoryScanner extends JPanel implements Runnable {
 	private ColorMap hsb;
 	private String dir;
 	private int tolerance;
-	JTextField tf;
-	JButton browseButton,scanButton;
-	JFrame progressFrame;
-	JProgressBar progressBar;
-	int fileIndex = 0;
+	private JTextField tf;
+	private JButton browseButton,scanButton;
+	private JFrame progressFrame;
+	
+	private static final int PIXEL_SKIP = 10;
 
 	public DirectoryScanner(ColorMap hsb, int tolerance) {
 		this.hsb = hsb;
 		this.tolerance = tolerance;
+		//to reference later where "this" is not the instance of DirectoryScanner
+		DirectoryScanner that = this;
+		
 		super.setLayout(new GridLayout(1, 4));
 
 		tf = new JTextField(20);
@@ -35,10 +38,9 @@ public class DirectoryScanner extends JPanel implements Runnable {
 		scanButton = new JButton("scan");
 
 		super.add(new JLabel("dir: "));
-
 		super.add(tf);
-
-		DirectoryScanner that = this;
+		
+		//browse button for adding directories to scan
 		browseButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				JFileChooser chooser = new JFileChooser();
@@ -52,19 +54,17 @@ public class DirectoryScanner extends JPanel implements Runnable {
 		});
 		super.add(browseButton);
 	    
+		//scan button that runs the scan and gives feedbacl
 		scanButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
+				//for user feedback
 				progressFrame = new JFrame("Scanning Folder");
 			    Container content = progressFrame.getContentPane();
-			    progressBar = new JProgressBar(0,100);
-			    progressBar.setValue(0);
-			    progressBar.setStringPainted(true);
-			    //content.add(progressBar, BorderLayout.NORTH);
-			    JLabel statusLabel = new JLabel("		Scanning Files");
+			    JLabel statusLabel = new JLabel("Scanning Files");
 			    content.add(statusLabel);
 			    progressFrame.setSize(300, 100);
 				progressFrame.setVisible(true);
-			    fileIndex = 0;
+				//the scanning is done in a separate thread so as not to lock up the GUI
 			    Thread t = new Thread(that, "directoryscan");
 			    t.start();
 			}
@@ -73,19 +73,36 @@ public class DirectoryScanner extends JPanel implements Runnable {
 
 	}
 	
+	//implemented as a part of runnable
+	//runs scanDirectory for the separate thread
 	public void run() {
 		scanDirectory();
 	}
 
+	/**
+	 * @param image - image to be scanned
+	 * @param path - path to that image
+	 * @param w - width of image
+	 * @param h - height of image
+	 * Description - This method scans an images colors via pixel array and stores colors
+	 * that are determined to vary enough by tolerance into the objects ColorMap
+	 * Code Attribution - http://stackoverflow.com/questions/6524196/java-get-pixel-array-from-image
+	 */
 	private void processImageColors(BufferedImage image, String path, int w, int h) {
+		//get pixels
 		final byte[] pixels = ((DataBufferByte) image.getRaster().getDataBuffer()).getData();
 		int width = image.getWidth();
 		int height = image.getHeight();
+		//new values is the array of potential new hex strings to be added
 		String[] newValues = new String[width * height];
+		//index of new values
 		int index = 0;
 		System.out.println("pixels: " + pixels.length);
-		final int pixelLength = 3;
-		// color processing http://stackoverflow.com/questions/6524196/java-get-pixel-array-from-image
+		//TODO remove after testing
+		long start = System.nanoTime();
+		//to improve running time for such large images, a certain amount of pixels
+		//are skipped still giving a broad sample size out of a (example) 500,000+ pixel array
+		final int pixelLength = 3*PIXEL_SKIP;
 		for (int pixel = 0, row = 0, col = 0; pixel < pixels.length; pixel += pixelLength) {
 			int argb = 0;
 			try {
@@ -96,18 +113,21 @@ public class DirectoryScanner extends JPanel implements Runnable {
 			} catch (ArrayIndexOutOfBoundsException e) {
 				continue;
 			}
+			//if no new values yet, the color cannot already be in the array
 			if (index == 0) {
 				newValues[index] = ColorDataPair.makeHexVal(argb);
 				index++;
 			} else {
 				String current = ColorDataPair.makeHexVal(argb);
 				Boolean exists = false;
+				//compare to existing values
 				for (int i = 0; i < index; i++) {
 					if ( ColorMap.isLikeColor(current, newValues[i], tolerance) ) {
 						exists = true;
 						break;
 					}
 				}
+				//add if color varies from existing colors enough
 				if (!exists) {
 					newValues[index] = current;
 					index++;
@@ -120,40 +140,34 @@ public class DirectoryScanner extends JPanel implements Runnable {
 				col++;
 			}
 		}
-
-		/*
-		 * for (int col = 0; col < height; col++) {System.out.println("col: "
-		 * +col); for (int row = 0; row < width; row++) { if (index == 0) {
-		 * newValues[index] = makeHexVal(image.getRGB(row, col)); index++; }
-		 * else { String current = makeHexVal(image.getRGB(row, col)); Boolean
-		 * exists = false; for (int i=0; i<index; i++) { if
-		 * (hexDiff(current,newValues[i])>tolerance ) { exists = true; break; }
-		 * } if (!exists) { newValues[index] = current; index++; }
-		 * 
-		 * } } } //outer for
-		 */
+		//TODO remove after testing
+		System.out.println("Process Time: "+(System.nanoTime()-start));
 		System.out.println(index);
+		int count = 0;
+		//for new values
 		for (int i = 0; i < index; i++) {
-
+			count = i;
 			ColorDataPair existing = hsb.find(new ColorDataPair(newValues[i], path, width, height));
-			System.out.println(existing);
+			//if hex string does not exist in color map add new, else add new wallpaper obj
+			//to existing ColorDataPair
 			if (existing == null) {
-				System.out.println("INSERT");
 				hsb.insert(new ColorDataPair(newValues[i], path, width, height));
 			} else {
 				existing.addWallpaper(new Wallpaper(path, width, height));
 			}
 
 		}
+		System.out.println("Inserted: "+count);
 	}
 
-	private boolean scanDirectory() {
+	/**
+	 * Description - scans a directory and processes the image within
+	 */
+	private void scanDirectory() {
 		try {
-			//File folder = new File(this.dir);
-			//int fileNum = folder.listFiles().length;
+			//walk through files in stored directory
 			Files.walk(Paths.get(this.dir)).forEach(filePath -> {
 				if (Files.isRegularFile(filePath)) {
-					System.out.println(filePath);
 					String[] fullPath = filePath.toString().split("/");
 					if (fullPath.length < 1)
 						return;
@@ -163,17 +177,16 @@ public class DirectoryScanner extends JPanel implements Runnable {
 					if (filename.length < 1)
 						return;
 					String fileExtension = filename[filename.length - 1];
-					// System.out.println(filename.length);
+					//check if file is image
 					if (fileExtension.toLowerCase().equals("png") || fileExtension.toLowerCase().equals("jpg")
 							|| fileExtension.toLowerCase().equals("jpeg")) {
-						System.out.println("is image");
+						//if so read the image and scan it into ColorMap
 						BufferedImage bimg;
 						try {
 							bimg = ImageIO.read(new File(filePath.toString()));
 							System.out.println("pre processing");
 							this.processImageColors(bimg, filePath.toString(), bimg.getWidth(), bimg.getHeight());
 							System.out.println("post processing");
-
 						} catch (IOException e) {
 							System.out.println(e.toString());
 						}
@@ -181,14 +194,13 @@ public class DirectoryScanner extends JPanel implements Runnable {
 				}
 			});
 		} catch (IOException e) {
-			// do error stuff
+			//TODO add error things
 			System.out.println(e.toString());
 		}
 		if (progressFrame!=null) {
 			progressFrame.dispose();
 			progressFrame = null;
 		}
-		return true;
 	}
 
 }
