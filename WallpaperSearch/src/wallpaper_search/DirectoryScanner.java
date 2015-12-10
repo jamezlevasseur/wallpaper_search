@@ -22,10 +22,14 @@ public class DirectoryScanner extends JPanel implements Runnable {
 	private JTextField tf;
 	private JButton browseButton,scanButton;
 	private JFrame progressFrame;
+	private CSVWriter csv;
+	int insertCount = 1;
 	
 	private static final int PIXEL_SKIP = 10;
 
-	public DirectoryScanner(ColorMap hsb, int tolerance) {
+	public DirectoryScanner(ColorMap hsb, int tolerance) throws IOException {
+		csv = new CSVWriter("/Users/jameslevasseur/Desktop/processing.csv", "ImageProcessingTime");
+		
 		this.hsb = hsb;
 		this.tolerance = tolerance;
 		//to reference later where "this" is not the instance of DirectoryScanner
@@ -76,7 +80,9 @@ public class DirectoryScanner extends JPanel implements Runnable {
 	//implemented as a part of runnable
 	//runs scanDirectory for the separate thread
 	public void run() {
+		long start = System.nanoTime();
 		scanDirectory();
+		System.out.println("Full Dir Scan Process Time: "+(System.nanoTime()-start));
 	}
 
 	/**
@@ -88,7 +94,7 @@ public class DirectoryScanner extends JPanel implements Runnable {
 	 * that are determined to vary enough by tolerance into the objects ColorMap
 	 * Code Attribution - http://stackoverflow.com/questions/6524196/java-get-pixel-array-from-image
 	 */
-	private void processImageColors(BufferedImage image, String path, int w, int h) {
+	private void processImageColors(BufferedImage image, String path, int w, int h) throws IOException {
 		//get pixels
 		final byte[] pixels = ((DataBufferByte) image.getRaster().getDataBuffer()).getData();
 		int width = image.getWidth();
@@ -141,9 +147,14 @@ public class DirectoryScanner extends JPanel implements Runnable {
 			}
 		}
 		//TODO remove after testing
-		System.out.println("Process Time: "+(System.nanoTime()-start));
+		try {
+		csv.write(""+(System.nanoTime()-start));
+		}catch (IOException e) {}
+		System.out.println("Single Image Process Time: "+(System.nanoTime()-start));
 		System.out.println(index);
 		int count = 0;
+		CSVWriter insertTime = new CSVWriter("/Users/jameslevasseur/Desktop/insert"+insertCount+".csv", "Insert Time");
+		insertCount++;
 		//for new values
 		for (int i = 0; i < index; i++) {
 			count = i;
@@ -151,12 +162,16 @@ public class DirectoryScanner extends JPanel implements Runnable {
 			//if hex string does not exist in color map add new, else add new wallpaper obj
 			//to existing ColorDataPair
 			if (existing == null) {
+				long istart = System.nanoTime();
 				hsb.insert(new ColorDataPair(newValues[i], path, width, height));
+				System.out.println("InsertTime: "+(System.nanoTime()-istart));
+				insertTime.write(""+(System.nanoTime()-istart));
 			} else {
 				existing.addWallpaper(new Wallpaper(path, width, height));
 			}
 
 		}
+		insertTime.end();
 		System.out.println("Inserted: "+count);
 	}
 
@@ -200,7 +215,7 @@ public class DirectoryScanner extends JPanel implements Runnable {
 		if (progressFrame!=null) {
 			progressFrame.dispose();
 			progressFrame = null;
-		}
+		}try{csv.end();}catch(IOException e){}
 	}
 
 }

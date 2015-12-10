@@ -5,6 +5,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.IOException;
 import java.awt.Color;
 import java.awt.Dimension;
 import javax.swing.colorchooser.ColorSelectionModel;
@@ -32,7 +33,7 @@ public class Core {
 	private final static int WALLPAPER_SCALE = 10;
 	private final static int RESULTS_COL = 2;
 
-	public static void main(String[] args) {
+	public static void main(String[] args) throws IOException {
 		//mainFrame setup
 		mainFrame = new JFrame("Wallpaper Search");
 		mainFrame.setSize(800,800);
@@ -266,6 +267,7 @@ public class Core {
 			if (i%RESULTS_COL==0)
 				resultsGrid.setRows(resultsGrid.getRows()+1);
 			JPanel displayPanel = new JPanel();
+			displayPanel.setLayout(new GridLayout(2, 1));
 			displayPanel.add(new ImagePanel(wallpapers.get(i).getFilePath(),wallpapers.get(i).width/WALLPAPER_SCALE,wallpapers.get(i).height/WALLPAPER_SCALE));
 			displayPanel.add(new JLabel(wallpapers.get(i).getFilePath()));
 			resultsPanel.add(displayPanel);
