@@ -17,6 +17,7 @@ public class Wallpaper implements Serializable {
 		this.tags = new ArrayList<String>();
 		this.width = w;
 		this.height = h;
+		determineSize(w, h);
 	}
 	
 	private void determineSize (int w, int h) {

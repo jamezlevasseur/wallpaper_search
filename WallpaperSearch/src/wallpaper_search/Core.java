@@ -22,13 +22,14 @@ public class Core {
 
 	private static JFrame mainFrame;
 	private static DirectoryScanner directoryInput;
-	private static JPanel searchColors,resultsPanel,selectColorsPanel,searchTags,tolerancePanel;
+	private static JPanel rootPanel,sizePanel,searchColors,resultsPanel,selectColorsPanel,searchTags,tolerancePanel;
 	private static JScrollPane resultsScroll;
-	private static GridLayout resultsGrid;
 	private static ArrayList<JPanel> colorPanels;
+	private static ArrayList<Wallpaper> lastResults;
 	private static ColorMap hsb;
 	private static int scanTolerance = 30;
 	private static int searchTolerance = 3;
+	private static String imageSize;
 
 	private final static int WALLPAPER_SCALE = 10;
 	private final static int RESULTS_COL = 2;
@@ -37,21 +38,20 @@ public class Core {
 		//mainFrame setup
 		mainFrame = new JFrame("Wallpaper Search");
 		mainFrame.setSize(800,800);
-		GridLayout mfLayout = new GridLayout(6, 1);
-		System.out.println( mfLayout.getHgap() );
-		mainFrame.setLayout(mfLayout);
-		mainFrame.setLocationByPlatform(true);
+
 		mainFrame.addWindowListener(new WindowAdapter() {
 			public void windowClosing(WindowEvent windowEvent){
 				System.exit(0);
 			}        
 		});
 
+		rootPanel = new JPanel(new SpringLayout());
+
 		//Directory Input setup
 		hsb = new ColorMap();
 		directoryInput = new DirectoryScanner(hsb, scanTolerance);
 		directoryInput.setLayout(new FlowLayout());
-		mainFrame.add(directoryInput);
+		rootPanel.add(directoryInput);
 
 		//searchColors panel setup
 		colorPanels = new ArrayList<JPanel>();
@@ -89,6 +89,7 @@ public class Core {
 						//when clicked remove this panel from search
 						Container parent = e.getComponent().getParent();
 						parent.remove(e.getComponent());
+						colorPanels.remove((JPanel) e.getComponent());
 						parent.validate();
 						parent.repaint();
 						System.out.println("remove");
@@ -132,15 +133,64 @@ public class Core {
 			}
 		});
 		searchColors.add(chooseColorButton);
-		mainFrame.add(searchColors);
+		rootPanel.add(searchColors);
 
 		//Search Tags Panel
 		searchTags = new JPanel();
 		searchTags.setLayout(new FlowLayout());
-		searchTags.add(new JLabel("Search Tags:"));
+		searchTags.add(new JLabel("Search Tags (separated by comma):"));
 		JTextField tf = new JTextField(20);
 		searchTags.add(tf);
-		mainFrame.add(searchTags);
+		rootPanel.add(searchTags);
+
+		//size panel
+		JRadioButton anySizeButton = new JRadioButton("any size");
+		anySizeButton.setActionCommand("any size");
+		anySizeButton.setSelected(true);
+		imageSize = "any size";
+		
+		JRadioButton mobileButton = new JRadioButton("mobile");
+		mobileButton.setActionCommand("mobile");
+
+		JRadioButton smallButton = new JRadioButton("small");
+		smallButton.setActionCommand("small");
+
+		JRadioButton mediumButton = new JRadioButton("medium");
+		mediumButton.setActionCommand("medium");
+
+		JRadioButton largeButton = new JRadioButton("large");
+		largeButton.setActionCommand("large");
+
+		ButtonGroup sizeGroup = new ButtonGroup();
+		sizeGroup.add(anySizeButton);
+		sizeGroup.add(mobileButton);
+		sizeGroup.add(smallButton);
+		sizeGroup.add(mediumButton);
+		sizeGroup.add(largeButton);
+
+		ActionListener radioListener = new ActionListener () {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				imageSize = e.getActionCommand();
+				updateResultsForSize();
+			}
+		};
+		
+		anySizeButton.addActionListener(radioListener);
+		mobileButton.addActionListener(radioListener);
+		smallButton.addActionListener(radioListener);
+		mediumButton.addActionListener(radioListener);
+		largeButton.addActionListener(radioListener);
+		
+		sizePanel = new JPanel(new GridLayout(1, 4));
+		
+		sizePanel.add(anySizeButton);
+		sizePanel.add(mobileButton);
+		sizePanel.add(smallButton);
+		sizePanel.add(mediumButton);
+		sizePanel.add(largeButton);
+		
+		rootPanel.add(sizePanel);
 
 		//scanTolerance Panel
 		tolerancePanel = new JPanel();
@@ -167,28 +217,21 @@ public class Core {
 		});
 		tolerancePanel.add(toleranceSlider);
 		tolerancePanel.add(sliderValLabel);
-		mainFrame.add(tolerancePanel);
+		rootPanel.add(tolerancePanel);
 
-		resultsPanel = new JPanel();
-		resultsGrid = new GridLayout(0, 2);
-		resultsPanel.setLayout(resultsGrid);
-		resultsPanel.setMinimumSize(new Dimension(600, 200));
-		resultsScroll = new JScrollPane(resultsPanel);
-		resultsScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-		resultsPanel.setBackground(Color.white);
-		mainFrame.add(resultsScroll);
-
+		SpringUtilities.makeGrid(rootPanel,
+				5, 1, //rows, cols
+				2, 2, //initialX, initialY
+				3, 3);//xPad, yPad
 		System.out.println("done.");
+		mainFrame.add(rootPanel);
+		mainFrame.pack();
 		mainFrame.setVisible(true);  
 	}
 
 	public static void showSearchResults () {
 		System.out.println("show search");
 		System.out.println("colorPanels: "+colorPanels.size());
-		JFrame popupFrame = new JFrame ();
-		popupFrame.setLayout(new FlowLayout());
-		popupFrame.add(new JLabel("Loading Results"));
-		popupFrame.setVisible(true);
 		//arraylist for results
 		ArrayList<ColorDataPair> searchResults = new ArrayList<ColorDataPair>();
 		ColorDataPair[][] preResults = new ColorDataPair[colorPanels.size()][];
@@ -202,7 +245,7 @@ public class Core {
 								ColorDataPair.makeHexVal( colorPanels.get(i).getBackground().hashCode() ))
 						,searchTolerance );
 			}
-			
+
 			//if more than one color is selected
 			if (colorPanels.size()>1) {
 				//first color is primary
@@ -252,30 +295,80 @@ public class Core {
 				}
 				//if the wallpaper doesn't already exist, add it
 				if (!exists) {
-					wallpapers.add(wp);
+					System.out.println(imageSize);
+					if (imageSize.equals("any size") || imageSize.equals(wp.size))
+						wallpapers.add(wp);
 				}
 			}
 		}
-		//clear panel for new results
-		resultsPanel.removeAll();
-		resultsGrid.setRows(0);
+		
+		resultsPanel = new JPanel(new GridLayout(wallpapers.size(), 1));
+		resultsPanel.setPreferredSize(new Dimension(800, 800));
+		resultsScroll = new JScrollPane(resultsPanel);
+		resultsScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+		resultsPanel.setBackground(Color.white);
+		
 		//add results
 		int count = 0;
 		for (int i=0; i<wallpapers.size(); i++) {
 			count = i+1;
-			System.out.println(wallpapers.get(i).getFilePath());
-			if (i%RESULTS_COL==0)
-				resultsGrid.setRows(resultsGrid.getRows()+1);
+			System.out.println("wallpaper file path: "+wallpapers.get(i).getFilePath());
 			JPanel displayPanel = new JPanel();
-			displayPanel.setLayout(new GridLayout(2, 1));
+			displayPanel.setMinimumSize(new Dimension(500, 200));
+			displayPanel.setPreferredSize(new Dimension(500, 200));
 			displayPanel.add(new ImagePanel(wallpapers.get(i).getFilePath(),wallpapers.get(i).width/WALLPAPER_SCALE,wallpapers.get(i).height/WALLPAPER_SCALE));
-			displayPanel.add(new JLabel(wallpapers.get(i).getFilePath()));
+			displayPanel.add(new JLabel("<html><body style=\"width:200px;\">"+wallpapers.get(i).getFilePath()+"</body></html>"));
 			resultsPanel.add(displayPanel);
 		}
 		if (wallpapers.size()==0) {
 			resultsPanel.add(new JLabel("No results found :("));
 		}
-		popupFrame.dispose();
+		
+		lastResults = wallpapers;
+		
+		JFrame popupFrame = new JFrame ();
+		popupFrame.setSize(800,800);
+		popupFrame.add(resultsPanel);
+		popupFrame.pack();
+		popupFrame.setVisible(true);
+		System.out.println(count);
+	}
+	
+	private static void updateResultsForSize () {
+		ArrayList<Wallpaper> wallpapers = new ArrayList<Wallpaper>();
+		
+		for (Wallpaper wp: lastResults) {
+			if (imageSize.equals("any size") || imageSize.equals(wp.size))
+				wallpapers.add(wp);
+		}
+		
+		resultsPanel = new JPanel(new GridLayout(wallpapers.size(), 1));
+		resultsPanel.setPreferredSize(new Dimension(800, 800));
+		resultsScroll = new JScrollPane(resultsPanel);
+		resultsScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+		resultsPanel.setBackground(Color.white);
+		
+		//add results
+		int count = 0;
+		for (int i=0; i<wallpapers.size(); i++) {
+			count = i+1;
+			System.out.println("wallpaper file path: "+wallpapers.get(i).getFilePath());
+			JPanel displayPanel = new JPanel();
+			displayPanel.setMinimumSize(new Dimension(500, 200));
+			displayPanel.setPreferredSize(new Dimension(500, 200));
+			displayPanel.add(new ImagePanel(wallpapers.get(i).getFilePath(),wallpapers.get(i).width/WALLPAPER_SCALE,wallpapers.get(i).height/WALLPAPER_SCALE));
+			displayPanel.add(new JLabel("<html><body style=\"width:200px;\">"+wallpapers.get(i).getFilePath()+"</body></html>"));
+			resultsPanel.add(displayPanel);
+		}
+		if (wallpapers.size()==0) {
+			resultsPanel.add(new JLabel("No results found :("));
+		}
+		
+		JFrame popupFrame = new JFrame ();
+		popupFrame.setSize(800,800);
+		popupFrame.add(resultsPanel);
+		popupFrame.pack();
+		popupFrame.setVisible(true);
 		System.out.println(count);
 	}
 
