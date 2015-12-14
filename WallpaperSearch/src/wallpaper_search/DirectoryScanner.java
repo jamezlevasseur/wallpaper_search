@@ -61,16 +61,18 @@ public class DirectoryScanner extends JPanel implements Runnable {
 		//scan button that runs the scan and gives feedbacl
 		scanButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				//for user feedback
-				progressFrame = new JFrame("Scanning Folder");
-			    Container content = progressFrame.getContentPane();
-			    JLabel statusLabel = new JLabel("Scanning Files");
-			    content.add(statusLabel);
-			    progressFrame.setSize(300, 100);
-				progressFrame.setVisible(true);
-				//the scanning is done in a separate thread so as not to lock up the GUI
-			    Thread t = new Thread(that, "directoryscan");
-			    t.start();
+				if (that.dir!=null && that.dir.equals("")) {
+					//for user feedback
+					progressFrame = new JFrame("Scanning Folder");
+				    Container content = progressFrame.getContentPane();
+				    JLabel statusLabel = new JLabel("Scanning Files");
+				    content.add(statusLabel);
+				    progressFrame.setSize(300, 100);
+					progressFrame.setVisible(true);
+					//the scanning is done in a separate thread so as not to lock up the GUI
+				    Thread t = new Thread(that, "directoryscan");
+				    t.start();
+				}
 			}
 		});
 		super.add(scanButton);
