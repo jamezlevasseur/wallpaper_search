@@ -26,7 +26,7 @@ public class Core {
 	private static JScrollPane resultsScroll;
 	private static ArrayList<JPanel> colorPanels;
 	private static ArrayList<Wallpaper> lastResults;
-	private static ColorMap hsb;
+	private static ColorStructure hsb;
 	private static int scanTolerance = 30;
 	private static int searchTolerance = 3;
 	private static String imageSize;
@@ -48,7 +48,8 @@ public class Core {
 		rootPanel = new JPanel(new SpringLayout());
 
 		//Directory Input setup
-		hsb = new ColorMap();
+		hsb = new ColorTree();
+		
 		directoryInput = new DirectoryScanner(hsb, scanTolerance);
 		directoryInput.setLayout(new FlowLayout());
 		rootPanel.add(directoryInput);
@@ -93,7 +94,8 @@ public class Core {
 						parent.validate();
 						parent.repaint();
 						System.out.println("remove");
-						showSearchResults();
+						if (colorPanels.size()>0)
+							showSearchResults();
 					}
 				});
 				//set size of color panel just added

@@ -16,7 +16,7 @@ import java.awt.Container;
 
 public class DirectoryScanner extends JPanel implements Runnable {
 
-	private ColorMap hsb;
+	private ColorStructure hsb;
 	private String dir;
 	private int tolerance;
 	private JTextField tf;
@@ -27,7 +27,7 @@ public class DirectoryScanner extends JPanel implements Runnable {
 	
 	private static final int PIXEL_SKIP = 10;
 
-	public DirectoryScanner(ColorMap hsb, int tolerance) throws IOException {
+	public DirectoryScanner(ColorStructure hsb, int tolerance) throws IOException {
 		csv = new CSVWriter("/Users/jameslevasseur/Desktop/processing.csv", "ImageProcessingTime");
 		
 		this.hsb = hsb;
@@ -61,7 +61,7 @@ public class DirectoryScanner extends JPanel implements Runnable {
 		//scan button that runs the scan and gives feedbacl
 		scanButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				if (that.dir!=null && that.dir.equals("")) {
+				if (that.dir!=null && !that.dir.equals("")) {
 					//for user feedback
 					progressFrame = new JFrame("Scanning Folder");
 				    Container content = progressFrame.getContentPane();
@@ -152,8 +152,8 @@ public class DirectoryScanner extends JPanel implements Runnable {
 		try {
 		csv.write(""+(System.nanoTime()-start));
 		}catch (IOException e) {}
-		System.out.println("Single Image Process Time: "+(System.nanoTime()-start));
-		System.out.println(index);
+		//System.out.println("Single Image Process Time: "+(System.nanoTime()-start));
+		System.out.println("Index "+index);
 		int count = 0;
 		CSVWriter insertTime = new CSVWriter("/Users/jameslevasseur/Desktop/insert"+insertCount+".csv", "Insert Time");
 		insertCount++;
@@ -165,8 +165,9 @@ public class DirectoryScanner extends JPanel implements Runnable {
 			//to existing ColorDataPair
 			if (existing == null) {
 				long istart = System.nanoTime();
+				System.out.println("Value: "+newValues[i]+" Path:"+path);
 				hsb.insert(new ColorDataPair(newValues[i], path, width, height));
-				System.out.println("InsertTime: "+(System.nanoTime()-istart));
+				//System.out.println("InsertTime: "+(System.nanoTime()-istart));
 				insertTime.write(""+(System.nanoTime()-istart));
 			} else {
 				existing.addWallpaper(new Wallpaper(path, width, height));

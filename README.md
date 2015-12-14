@@ -1,13 +1,32 @@
-# wallpaper_search
+ABOUT
+-------
+This project is a GUI application in Java that helps search through a large collection of desktop wallpapers with the goal being to find one wallpaper or a certain type of wallpaper out of a large collection.
 
-Dev Path:
+INSTRUCTIONS
+------------
 
--find dir
+1. click browse
+2. select a directory with image files within it (note: the wallpapers folder provided)
+3. click scan
+4. click add and select a color
+5. click done in the selection window
+6. view results in bottom panel
 
--scan images into tree
+BUGS
+-----
 
--show images in GUI
+-certain colors may cause incredibly long search operations upwards of 10 minutes
 
--add color search to GUI
+-accuracy of search algorithm is inconsistent
 
--add tag search to GUI
+
+TODO
+-----
+
+-tagging system
+
+-make results UI better
+
+-implement comparative color tree data structure
+
+-compare color map to color tree performance

@@ -1,17 +1,15 @@
 package wallpaper_search;
+
 import java.awt.Color;
-import java.io.Serializable;
 import java.util.ArrayList;
 
-
-public class ColorMap extends ColorStructure implements Serializable {
-
-	private static final long serialVersionUID = 435662231;
-	private ColorDataPair[][][] hsb;
+public class ColorTree extends ColorStructure {
+	
+	private RedBlackTree h;
 	private final static int HIGH_INDEX = 101;
 	
-	public ColorMap () {
-		hsb = new ColorDataPair[HIGH_INDEX][HIGH_INDEX][HIGH_INDEX];
+	public ColorTree () {
+		h = new RedBlackTree();
 	}
 	
 	/**
@@ -22,14 +20,50 @@ public class ColorMap extends ColorStructure implements Serializable {
 	 */
 	public ColorDataPair insert (ColorDataPair ins) {
 		int[] indexes = getIndexesForHex(ins.getHex());
-		if (hsb[indexes[0]][indexes[1]][indexes[2]]==null) {
-			hsb[indexes[0]][indexes[1]][indexes[2]] = ins;
-			return ins;
+		TreeDataPair hueFindings = (TreeDataPair) h.find(new TreeDataPair(indexes[0]));
+		if (hueFindings==null) {
+			TreeDataPair saturation = new TreeDataPair(indexes[0]);
+			TreeDataPair brightness = new TreeDataPair(indexes[1]);
+			brightness.getTree().insert(new ColorTreePair(indexes[2], ins));
+			saturation.getTree().insert(brightness);
+			h.insert(saturation);
 		} else {
-			for (Wallpaper wp: ins.getWallpapers())
-				hsb[indexes[0]][indexes[1]][indexes[2]].addWallpaper(wp);
-			return hsb[indexes[0]][indexes[1]][indexes[2]];
+			TreeDataPair saturationFindings =
+					(TreeDataPair) hueFindings.getTree().find(new TreeDataPair(indexes[1]));
+			if (saturationFindings==null) {
+				TreeDataPair brightness = new TreeDataPair(indexes[1]);
+				brightness.getTree().insert(new ColorTreePair(indexes[2], ins));
+				hueFindings.getTree().insert(brightness);
+			} else {
+				ColorTreePair brightnessFindings =
+						(ColorTreePair) saturationFindings.getTree().find(new ColorTreePair(indexes[2]));
+				if (brightnessFindings==null) {
+					saturationFindings.getTree().insert(new ColorTreePair(indexes[2], ins));
+				} else {
+					for (Wallpaper wp: ins.getWallpapers())
+						brightnessFindings.data.addWallpaper(wp);
+				}
+			}
 		}
+		return null;
+	}
+	
+	/**
+	 * Attempts to find a ColorDataPair object in the ColorMap
+	 * @param find - the object being searched for, search specifically for the hex value
+	 * @return the object with hex value matching find or null
+	 */
+	private ColorDataPair find (int[] indexes) {
+		TreeDataPair s = (TreeDataPair) h.find(new TreeDataPair(indexes[0]));
+		if (s==null)
+			return null;
+		TreeDataPair b = (TreeDataPair) s.getTree().find(new TreeDataPair(indexes[1]));
+		if (b==null)
+			return null;
+		ColorTreePair findings = (ColorTreePair) b.getTree().find(new ColorTreePair(indexes[2]));
+		if (findings==null)
+			return null;
+		return findings.data;
 	}
 	
 	/**
@@ -39,10 +73,16 @@ public class ColorMap extends ColorStructure implements Serializable {
 	 */
 	public ColorDataPair find (ColorDataPair find) {
 		int[] indexes = getIndexesForHex(find.getHex());
-		if (hsb[indexes[0]][indexes[1]][indexes[2]]!=null) {
-			return hsb[indexes[0]][indexes[1]][indexes[2]];
-		}
-		return null;
+		TreeDataPair s = (TreeDataPair) h.find(new TreeDataPair(indexes[0]));
+		if (s==null)
+			return null;
+		TreeDataPair b = (TreeDataPair) s.getTree().find(new TreeDataPair(indexes[1]));
+		if (b==null)
+			return null;
+		ColorTreePair findings = (ColorTreePair) b.getTree().find(new ColorTreePair(indexes[2]));
+		if (findings==null)
+			return null;
+		return findings.data;
 	}
 	
 	/**
@@ -80,10 +120,11 @@ public class ColorMap extends ColorStructure implements Serializable {
 			for (int s=lowerIndex; s<HIGH_INDEX; s++ ) {
 				for (int b=lowerIndex; b<HIGH_INDEX; b++ ) {
 					//System.out.println("h: "+h+" s: "+s+" b: "+b);
-					if (hsb[h][s][b] != null) {
-						System.out.println("ADDED: "+hsb[h][s][b]);
+					ColorDataPair findings = this.find(new int[] {h,s,b});
+					if (findings != null) {
+						System.out.println("ADDED: "+findings);
 						
-						results.add( hsb[h][s][b] );
+						results.add( findings );
 					}
 				}
 			}
@@ -152,4 +193,73 @@ public class ColorMap extends ColorStructure implements Serializable {
 		return indexes;
 	}
 	
+
+}
+
+class TreeDataPair implements Comparable<Object> {
+	
+	private int index;
+	private RedBlackTree tree;
+	
+	public TreeDataPair (int index, RedBlackTree tree) {
+		this.index = index;
+		this.tree = tree;
+	}
+	
+	public TreeDataPair (int index) {
+		this.index = index;
+		this.tree = new RedBlackTree();
+	}
+	
+	public void setIndex (int index) {
+		this.index = index;
+	}
+	
+	public int getIndex () {
+		return this.index;
+	}
+	
+	public void setTree (RedBlackTree tree) {
+		this.tree = tree;
+	}
+	
+	public RedBlackTree getTree () {
+		return this.tree;
+	}
+	
+	@Override
+	public int compareTo(Object o) {
+		TreeDataPair other = (TreeDataPair) o;
+		if (this.index>other.getIndex())
+			return 1;
+		else if (this.index<other.getIndex())
+			return -1;
+		return 0;
+	}
+
+}
+
+class ColorTreePair implements Comparable<Object> {
+	
+	public int index;
+	public ColorDataPair data;
+	
+	public ColorTreePair (int index, ColorDataPair data) {
+		this.index = index;
+		this.data = data;
+	}
+
+	public ColorTreePair (int index) {
+		this.index = index;
+	}
+	
+	@Override
+	public int compareTo(Object o) {
+		ColorTreePair other = (ColorTreePair) o;
+		if (index > other.index)
+			return 1;
+		if (index < other.index)
+			return -1;
+		return 0;
+	}
 }
