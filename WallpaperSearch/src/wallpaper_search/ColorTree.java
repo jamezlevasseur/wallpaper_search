@@ -42,10 +42,11 @@ public class ColorTree extends ColorStructure {
 				} else {
 					for (Wallpaper wp: ins.getWallpapers())
 						brightnessFindings.data.addWallpaper(wp);
+					return brightnessFindings.data;
 				}
 			}
 		}
-		return null;
+		return ins;
 	}
 	
 	/**

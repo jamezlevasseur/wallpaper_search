@@ -237,16 +237,22 @@ public class Core {
 		//arraylist for results
 		ArrayList<ColorDataPair> searchResults = new ArrayList<ColorDataPair>();
 		ColorDataPair[][] preResults = new ColorDataPair[colorPanels.size()][];
+		
 		//only display new if filter colors are selected
+		
 		if (colorPanels.size()>0) {
 			//for colors selected
 			for (int i=0; i<colorPanels.size(); i++) {
 				//get results for colors like the ones selected
+				long fstart = System.nanoTime();
 				preResults[i] = hsb.findLikeColors(
 						new ColorDataPair(
 								ColorDataPair.makeHexVal( colorPanels.get(i).getBackground().hashCode() ))
 						,searchTolerance );
+				System.out.println("Find  Time: "+(System.nanoTime()-fstart));
+				
 			}
+
 
 			//if more than one color is selected
 			if (colorPanels.size()>1) {
@@ -276,6 +282,7 @@ public class Core {
 			}
 
 		}
+
 
 		//arraylist of wallpapers
 		ArrayList<Wallpaper> wallpapers = new ArrayList<Wallpaper>();

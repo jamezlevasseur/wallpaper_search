@@ -106,8 +106,7 @@ public class DirectoryScanner extends JPanel implements Runnable {
 		//index of new values
 		int index = 0;
 		System.out.println("pixels: " + pixels.length);
-		//TODO remove after testing
-		long start = System.nanoTime();
+
 		//to improve running time for such large images, a certain amount of pixels
 		//are skipped still giving a broad sample size out of a (example) 500,000+ pixel array
 		final int pixelLength = 3*PIXEL_SKIP;
@@ -148,14 +147,9 @@ public class DirectoryScanner extends JPanel implements Runnable {
 				col++;
 			}
 		}
-		//TODO remove after testing
-		try {
-		csv.write(""+(System.nanoTime()-start));
-		}catch (IOException e) {}
 		//System.out.println("Single Image Process Time: "+(System.nanoTime()-start));
 		System.out.println("Index "+index);
 		int count = 0;
-		CSVWriter insertTime = new CSVWriter("/Users/jameslevasseur/Desktop/insert"+insertCount+".csv", "Insert Time");
 		insertCount++;
 		//for new values
 		for (int i = 0; i < index; i++) {
@@ -167,14 +161,14 @@ public class DirectoryScanner extends JPanel implements Runnable {
 				long istart = System.nanoTime();
 				System.out.println("Value: "+newValues[i]+" Path:"+path);
 				hsb.insert(new ColorDataPair(newValues[i], path, width, height));
-				//System.out.println("InsertTime: "+(System.nanoTime()-istart));
-				insertTime.write(""+(System.nanoTime()-istart));
+				System.out.println("InsertTime: "+(System.nanoTime()-istart));
+			
 			} else {
 				existing.addWallpaper(new Wallpaper(path, width, height));
 			}
 
 		}
-		insertTime.end();
+
 		System.out.println("Inserted: "+count);
 	}
 
